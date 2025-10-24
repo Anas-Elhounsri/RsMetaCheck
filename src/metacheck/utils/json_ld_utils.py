@@ -473,8 +473,8 @@ def create_pitfall_jsonld(somef_data: Dict, pitfall_results: List[Dict], file_na
         "description": description_info,
         "creator": {
             "@type": "schema:Person",
-            "name": "Anas El Hounsri",
-            "email": "a.elhounsri@upm.com"
+            "name": "Anonymous",
+            "email": "example.@email.com"
         },
         "dateCreated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "license": {"@id: https://opensource.org/license/mit"},

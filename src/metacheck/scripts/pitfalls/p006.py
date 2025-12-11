@@ -1,6 +1,4 @@
-
 from typing import Dict
-import re
 from metacheck.utils.pitfall_utils import extract_metadata_source_filename
 
 def is_local_file_license(license_value: str) -> bool:
@@ -26,7 +24,7 @@ def is_local_file_license(license_value: str) -> bool:
         'copying', 'copying.md', 'copying.txt',
         'copyright', 'copyright.md', 'copyright.txt',
         'licence', 'licence.md', 'licence.txt',  # British spelling
-        'readme.md', 'doc.txt', 'file.rst'  # Other common file patterns
+        'readme.md', 'doc.txt', 'file.rst'
     ]
 
     if license_lower in license_file_names:

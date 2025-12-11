@@ -259,7 +259,7 @@ def detect_all_pitfalls(json_files: Iterable[Path], pitfalls_output_dir: Union[s
                 "count": 0,
                 "percentage": 0.0,
                 "languages": {}
-            },
+            }
         ]
     }
 

@@ -1,7 +1,7 @@
 import argparse
 import os
 from pathlib import Path
-from metacheck.run_somef import run_somef_batch
+from metacheck.run_somef import run_somef_batch, run_somef_single
 from metacheck.run_analyzer import run_analysis
 
 
@@ -11,7 +11,7 @@ def cli():
         "--input",
         nargs="+",
         required=True,
-        help="One or more JSON files containing repositories (e.g., GitHub, GitLab) OR existing SoMEF output files when using --skip-somef."
+        help="One or more: GitHub/GitLab URLs, JSON files containing repositories, OR existing SoMEF output files when using --skip-somef."
     )
     parser.add_argument(
         "--skip-somef",
@@ -58,17 +58,21 @@ def cli():
         threshold = args.threshold
         somef_output_dir = os.path.join(os.getcwd(), "somef_outputs")
 
-        print(f"Detected {len(args.input)} input files:")
-        for json_path in args.input:
-            if not os.path.exists(json_path):
-                print(f"Skipping missing file: {json_path}")
-                continue
-            print(f"Processing repositories from {json_path}")
-            run_somef_batch(json_path, somef_output_dir, threshold)
+        print(f"Detected {len(args.input)} input(s):")
 
+        for input_item in args.input:
+            if input_item.startswith("http://") or input_item.startswith("https://"):
+                print(f"Processing repository URL: {input_item}")
+                run_somef_single(input_item, somef_output_dir, threshold)
+            elif os.path.exists(input_item):
+                print(f"Processing repositories from file: {input_item}")
+                run_somef_batch(input_item, somef_output_dir, threshold)
+            else:
+                print(f"Warning: Skipping invalid input (not a URL or existing file): {input_item}")
+
+        print(f"\nRunning analysis on outputs in {somef_output_dir}...")
         run_analysis(somef_output_dir, args.pitfalls_output, args.analysis_output)
 
 
 if __name__ == "__main__":
-    print("!!!THIS IS THE CORRECT TEST VERSION (MSR26) FIXING ONLY W003!!!")
     cli()

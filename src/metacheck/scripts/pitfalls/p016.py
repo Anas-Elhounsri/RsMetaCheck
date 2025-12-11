@@ -1,7 +1,5 @@
 from typing import Dict
 import re
-from urllib.parse import urlparse
-
 
 def normalize_repository_url(url: str) -> str:
     """
@@ -13,12 +11,11 @@ def normalize_repository_url(url: str) -> str:
     url = url.lower().strip()
 
     url = re.sub(r'^git\+', '', url)  # Remove git+ prefix
-    url = re.sub(r'\.git$', '', url)  # Remove .git suffix
-    url = re.sub(r'/$', '', url)  # Remove trailing slash
 
-    # Convert SSH to HTTPS format for comparison
+    url = re.sub(r'/$', '', url)  # Remove trailing slash
+    url = re.sub(r'\.git$', '', url)  # Remove .git suffix
+
     if url.startswith('git@'):
-        # Convert git@github.com:user/repo to https://github.com/user/repo
         url = re.sub(r'^git@([^:]+):', r'https://\1/', url)
 
     return url

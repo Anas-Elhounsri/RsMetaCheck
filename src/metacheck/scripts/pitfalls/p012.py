@@ -11,16 +11,21 @@ def extract_version_from_download_url(url: str) -> str:
 
     # Common version patterns in download URLs
     version_patterns = [
-        r'/archive/(?:v)?(\d+\.\d+(?:\.\d+)?(?:[a-zA-Z0-9\-\.]*)?)',  # /archive/3.8.0 or /archive/v1.2.3
+        r'/archive/(?:v)?(\d+\.\d+(?:\.\d+)?(?:[a-zA-Z0-9\-\.]*)?)\.',  # /archive/3.8.0. or /archive/v1.2.3.
+        r'/archive/(?:v)?(\d+\.\d+(?:\.\d+)?(?:[a-zA-Z0-9\-\.]*)?)$',
+        # /archive/3.8.0 or /archive/v1.2.3 (end of string)
         r'[-_](?:v)?(\d+\.\d+(?:\.\d+)?(?:[a-zA-Z0-9\-\.]*)?)\.',  # -3.8.0.tar.gz or _v1.2.3.zip
         r'/(?:v)?(\d+\.\d+(?:\.\d+)?(?:[a-zA-Z0-9\-\.]*)?)/[^/]*$',  # /3.8.0/something
-        r'[-_/](?:v)?(\d+\.\d+(?:\.\d+)?(?:[a-zA-Z0-9\-\.]*)?)(?:\.tar\.gz|\.zip|$)'  # More flexible ending
     ]
 
     for pattern in version_patterns:
         match = re.search(pattern, url)
         if match:
-            return match.group(1)
+            version = match.group(1)
+            # Remove any trailing file extension artifacts
+            # This handles cases where .tar, .zip etc might be captured
+            version = re.sub(r'\.(tar|gz|zip|bz2|xz|tgz).*$', '', version)
+            return version
 
     return None
 
@@ -32,12 +37,16 @@ def normalize_version(version: str) -> str:
     if not version:
         return None
 
-    # Remove 'v' prefix if present
-    normalized = version.lower().strip()
+    normalized = version.strip()
+
+    if not normalized:
+        return None
+
+    normalized = normalized.lower()
     if normalized.startswith('v'):
         normalized = normalized[1:]
 
-    return normalized
+    return normalized if normalized else None
 
 
 def get_latest_release_version(somef_data: Dict) -> str:
@@ -51,21 +60,17 @@ def get_latest_release_version(somef_data: Dict) -> str:
     if not isinstance(releases, list) or not releases:
         return None
 
-    # Get the first (latest) release
     latest_release = releases[0]
     if "result" in latest_release:
         result = latest_release["result"]
 
-        # Try to get version from tag first
         if "tag" in result and result["tag"]:
             tag = result["tag"].strip()
             if tag:
                 return normalize_version(tag)
 
-        # Fallback to name if tag is not available
         if "name" in result and result["name"]:
             name = result["name"]
-            # Extract version from name
             version_match = re.search(r'(?:v)?(\d+\.\d+(?:\.\d+)?(?:[a-zA-Z0-9\-\.]*)?)', name)
             if version_match:
                 return normalize_version(version_match.group(1))
@@ -96,7 +101,6 @@ def detect_outdated_download_url_pitfall(somef_data: Dict, file_name: str) -> Di
     codemeta_download_url = None
     codemeta_source = None
 
-    # Find download URL from codemeta.json
     for entry in download_entries:
         source = entry.get("source", "")
         technique = entry.get("technique", "")
@@ -111,24 +115,20 @@ def detect_outdated_download_url_pitfall(somef_data: Dict, file_name: str) -> Di
     if not codemeta_download_url:
         return result
 
-    # Extract version from download URL
     download_version = extract_version_from_download_url(codemeta_download_url)
     if not download_version:
         return result
 
-    # Get latest release version
     latest_version = get_latest_release_version(somef_data)
     if not latest_version:
         return result
 
-    # Normalize both versions for comparison
     normalized_download_version = normalize_version(download_version)
     normalized_latest_version = normalize_version(latest_version)
 
     if not normalized_download_version or not normalized_latest_version:
         return result
 
-    # Compare versions
     if normalized_download_version != normalized_latest_version:
         result["has_pitfall"] = True
         result["download_url"] = codemeta_download_url

@@ -1,3 +1,4 @@
+
 from typing import Dict
 from metacheck.utils.pitfall_utils import extract_metadata_source_filename
 
@@ -11,11 +12,16 @@ def is_repository_url(url: str) -> bool:
 
     url_lower = url.lower()
 
-    # Valid repository indicators
+    if 'github.io' in url_lower:
+        return False
+
     repo_indicators = [
         'github.com/',
+        'github.org/',
         'gitlab.com/',
+        'gitlab.org/',
         'bitbucket.org/',
+        'bitbucket.net/',
         'sourceforge.net/projects/',
         'git.',
         '.git'
@@ -37,7 +43,9 @@ def is_homepage_url_repo(url: str) -> bool:
 
     url_lower = url.lower()
 
-    # Homepage indicators
+    if is_repository_url(url):
+        return False
+
     homepage_indicators = [
         '.org/',
         '.com/',
@@ -50,11 +58,6 @@ def is_homepage_url_repo(url: str) -> bool:
         'github.io'
     ]
 
-    # If it's clearly a repository URL, it's not a homepage
-    if is_repository_url(url):
-        return False
-
-    # Check for homepage indicators
     for indicator in homepage_indicators:
         if indicator in url_lower:
             return True
@@ -82,15 +85,17 @@ def detect_coderepository_homepage_pitfall(somef_data: Dict, file_name: str) -> 
     if not isinstance(repo_entries, list):
         return result
 
-    metadata_sources = ["codemeta.json", "DESCRIPTION", "composer.json", "package.json", "pom.xml", "pyproject.toml", "requirements.txt", "setup.py"]
+    metadata_sources = ["codemeta.json", "DESCRIPTION", "composer.json", "package.json",
+                        "pom.xml", "pyproject.toml", "requirements.txt", "setup.py"]
 
     for entry in repo_entries:
         technique = entry.get("technique", "")
         source = entry.get("source", "")
 
         is_metadata_source = (
-                technique in metadata_sources or
-                any(src in source.lower() for src in metadata_sources)
+            technique == "code_parser" or
+            technique in metadata_sources or
+            any(src in source.lower() for src in metadata_sources)
         )
 
         if is_metadata_source:

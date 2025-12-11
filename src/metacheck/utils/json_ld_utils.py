@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Dict, List
 from pathlib import Path
 
-
 def extract_software_info_from_somef(somef_data: Dict) -> Dict:
     """
     Extract software information from SoMEF data for the assessedSoftware section.
@@ -53,40 +52,43 @@ def extract_software_info_from_somef(somef_data: Dict) -> Dict:
 
 def get_pitfall_description(pitfall_code: str) -> str:
     """
-    Get the description for a given pitfall code.
+    Get the description for a given pitfall/warning code.
     """
-    pitfall_descriptions = {
+    descriptions = {
+        # Pitfalls (P001-P018)
         "P001": "The metadata file (codemeta or other) has a version which does not correspond to the version used in the latest release",
         "P002": "LICENSE file contains template placeholders like <program>, <year>, <name of author> that were not replaced",
-        "W001": "The metadata file (codemeta or other) Software requirements don't have version specifications",
-        "W002": "codemeta.json dateModified is outdated compared to the actual repository last update date",
-        "P003": "The metadata file (codemeta or other) have multiple authors in single field instead of a list",
+        "P003": "Metadata files have multiple authors in single field instead of a list",
         "P004": "In codemeta.json README property pointing to their homepage/wiki instead of README file",
         "P005": "codemeta.json referencePublication refers to software archive instead of paper",
-        "P006": "The metadata file (codemeta or other) has License pointing to a local file instead of stating the name",
-        "W003": "Repository has multiple licenses but in codemeta.json only has one listed",
-        "W004": "Programming languages in codemeta.json do not have versions",
+        "P006": "The metadata file has License pointing to a local file instead of stating the name",
         "P007": "CITATION.cff does not have referencePublication even though it's referenced in codemeta.json",
-        "W005": "The metadata file (codemeta or other) softwareRequirements have more than one req, but it's written as one string",
-        "P008": "The metadata file (codemeta or other) softwareRequirement points to an invalid page",
-        "W006": "codemeta.json Identifier is a name instead of a valid unique identifier, but an identifier exist",
-        "W007": "codemeta.json Identifier is empty",
-        "P009": "The metadata file (codemeta or other) coderepository points to their homepage",
+        "P008": "The metadata file softwareRequirement points to an invalid page",
+        "P009": "The metadata file coderepository points to their homepage",
         "P010": "LICENSE file only contains copyright information without actual license terms",
         "P011": "codemeta.json IssueTracker violates the expected URL format",
         "P012": "codemeta.json downloadURL is outdated",
-        "W009": "codemeta.json developmentStatus is a URL instead of a string",
-        "W008": "coendemeta GivName is a list instead of a string",
-        "P013": "The metadata file (codemeta or other) License does not have the specific version",
-        "W010": "The metadata file (codemeta or other) codeRepository uses Git remote-style shorthand instead of full URL",
+        "P013": "The metadata file License does not have the specific version",
         "P014": "codemeta.json uses bare DOIs in the identifier field instead of full https://doi.org/ URL",
         "P015": "In codemeta.json contIntegration link returns 404",
-        "P016": "The metadata file (codemeta or other) codeRepository does not point to the same repository",
+        "P016": "The metadata file codeRepository does not point to the same repository",
         "P017": "codemeta.json version does not match the package's",
-        "P018": "codemeta.json Identifier uses raw SWHIDs without their resolvable URL"
+        "P018": "codemeta.json Identifier uses raw SWHIDs without their resolvable URL",
+
+        # Warnings (W001-W010)
+        "W001": "Software requirements in metadata files don't have version specifications",
+        "W002": "The dateModified in codemeta.json is outdated compared to the actual repository last update date",
+        "W003": "Codemeta.json repository has multiple licenses but only one is listed",
+        "W004": "Programming languages in codemeta.json do not have versions",
+        "W005": "The metadata file softwareRequirements have more than one req, but it's written as one string",
+        "W006": "codemeta.json Identifier is a name instead of a valid unique identifier, but an identifier exist",
+        "W007": "codemeta.json Identifier is empty",
+        "W008": "The metadata file GivenName is a list instead of a string",
+        "W009": "codemeta.json developmentStatus is a URL instead of a string",
+        "W010": "The metadata file codeRepository uses Git remote-style shorthand instead of full URL",
     }
 
-    return pitfall_descriptions.get(pitfall_code, f"Description for {pitfall_code}")
+    return descriptions.get(pitfall_code, f"Description for {pitfall_code}")
 
 
 def extract_metadata_source(pitfall_result: Dict) -> str:
@@ -141,10 +143,11 @@ def extract_metadata_source_filename(source_path: str) -> str:
 
 def format_evidence_text(pitfall_code: str, pitfall_result: Dict) -> str:
     """
-    Format evidence text based on pitfall type and result data for ALL pitfalls.
+    Format evidence text based on pitfall type and result data for ALL pitfalls and warnings.
     """
     evidence_base = f"{pitfall_code} detected: "
 
+    # Pitfalls
     if pitfall_code == "P001":
         if "metadata_version" in pitfall_result and "release_version" in pitfall_result:
             metadata_source = extract_metadata_source(pitfall_result)
@@ -154,74 +157,38 @@ def format_evidence_text(pitfall_code: str, pitfall_result: Dict) -> str:
 
     elif pitfall_code == "P002":
         if pitfall_result.get("placeholders_found"):
-            return f"{evidence_base} License file contains unreplaced template placeholders"
-        return f"{evidence_base} License file contains template placeholders that were not replaced"
+            return f"{evidence_base}LICENSE file contains unreplaced template placeholders"
+        return f"{evidence_base}LICENSE file contains template placeholders that were not replaced"
 
-    elif pitfall_code == "W003":
-        if "unversioned_requirements" in pitfall_result:
-            reqs = pitfall_result["unversioned_requirements"]
-            metadata_source = extract_metadata_source(pitfall_result)
-            if isinstance(reqs, list) and len(reqs) > 0:
-                # Filter out None values and convert to strings
-                clean_reqs = [str(req) for req in reqs if req is not None][:3]
-                if clean_reqs:
-                    req_list = ', '.join(clean_reqs)
-                    return f"{evidence_base}{metadata_source} contains software requirements without versions: {req_list}{'...' if len(reqs) > 3 else ''}"
-        return f"{evidence_base}Software requirements found without version specifications"
-
-    elif pitfall_code == "W004":
-        if "codemeta_date_parsed" in pitfall_result and "github_api_date_parsed" in pitfall_result:
-            codemeta_date = pitfall_result.get('codemeta_date_parsed') or 'unknown'
-            github_date = pitfall_result.get('github_api_date_parsed') or 'unknown'
-            return f"{evidence_base}codemeta.json dateModified '{codemeta_date}' is outdated compared to repository date '{github_date}'"
-        return f"{evidence_base}dateModified in codemeta.json is outdated compared to actual repository last update"
-
-    elif pitfall_code == "P005":
+    elif pitfall_code == "P003":
         if "author_value" in pitfall_result:
             metadata_source = extract_metadata_source(pitfall_result)
             author_value = pitfall_result.get('author_value') or 'unknown'
             return f"{evidence_base}{metadata_source} Multiple authors found in single field: '{author_value}'"
 
-    elif pitfall_code == "P006":
+    elif pitfall_code == "P004":
         if "readme_url" in pitfall_result:
             readme_url = pitfall_result.get('readme_url') or 'unknown URL'
-            return f"{evidence_base} codemeta.json README property points to homepage/wiki instead of README file: {readme_url}"
+            return f"{evidence_base}codemeta.json README property points to homepage/wiki instead of README file: {readme_url}"
 
-    elif pitfall_code == "P007":
+    elif pitfall_code == "P005":
         if "reference_url" in pitfall_result:
             reference_url = pitfall_result.get('reference_url') or 'unknown URL'
             return f"{evidence_base}codemeta.json Reference publication points to software archive instead of paper: {reference_url}"
 
-    elif pitfall_code == "P008":
+    elif pitfall_code == "P006":
         if "license_value" in pitfall_result:
             metadata_source = extract_metadata_source(pitfall_result)
             license_value = pitfall_result.get('license_value') or 'unknown'
             return f"{evidence_base}{metadata_source} License points to local file instead of license name: '{license_value}'"
 
-    elif pitfall_code == "W010":
-        if "programming_languages_without_version" in pitfall_result:
-            langs = pitfall_result["programming_languages_without_version"]
-            if isinstance(langs, list) and len(langs) > 0:
-                # Filter out None values and convert to strings
-                clean_langs = [str(lang) for lang in langs if lang is not None]
-                if clean_langs:
-                    return f"{evidence_base}codemeta.json Programming languages without versions: {', '.join(clean_langs)}"
-        return f"{evidence_base} codemeta.json Programming languages in metadata do not have version specifications"
-
-    elif pitfall_code == "P011":
+    elif pitfall_code == "P007":
         return f"{evidence_base}CITATION.cff file exists but does not contain referencePublication while codemeta.json references it"
 
-    elif pitfall_code == "W012":
-        if "requirements_string" in pitfall_result:
-            metadata_source = extract_metadata_source(pitfall_result)
-            requirements_string = pitfall_result.get('requirements_string') or 'unknown'
-            return f"{evidence_base}{metadata_source} Multiple requirements written as single string: '{requirements_string}'"
-
-    elif pitfall_code == "P013":
+    elif pitfall_code == "P008":
         if "invalid_urls" in pitfall_result:
             invalid_urls = pitfall_result["invalid_urls"]
             if isinstance(invalid_urls, list) and len(invalid_urls) > 0:
-                # Handle case where invalid_urls might contain None values or dicts
                 urls = []
                 for url_info in invalid_urls:
                     if isinstance(url_info, dict) and "url" in url_info and url_info["url"]:
@@ -235,81 +202,121 @@ def format_evidence_text(pitfall_code: str, pitfall_result: Dict) -> str:
                     return f"{evidence_base}{metadata_source} Software requirements contain invalid URLs: {url_list}{'...' if len(urls) > 3 else ''}"
         return f"{evidence_base}Software requirements contain invalid URLs"
 
-    elif pitfall_code == "W014":
-        if "codemeta_identifier" in pitfall_result:
-            identifier = pitfall_result.get('codemeta_identifier') or 'unknown'
-            return f"{evidence_base}codemeta.json Identifier is a name instead of valid unique identifier: '{identifier}'"
-
-    elif pitfall_code == "W015":
-        return f"{evidence_base}codemeta.json identifier field is empty or missing"
-
-    elif pitfall_code == "P016":
+    elif pitfall_code == "P009":
         if "repository_url" in pitfall_result:
             metadata_source = extract_metadata_source(pitfall_result)
             repository_url = pitfall_result.get('repository_url') or 'unknown URL'
             return f"{evidence_base}{metadata_source} codeRepository points to homepage instead of repository: {repository_url}"
 
-    elif pitfall_code == "P017":
+    elif pitfall_code == "P010":
         return f"{evidence_base}LICENSE file only contains copyright information without actual license terms"
 
-    elif pitfall_code == "P018":
+    elif pitfall_code == "P011":
         if "issue_url" in pitfall_result:
             issue_url = pitfall_result.get('issue_url') or 'unknown URL'
             return f"{evidence_base}codemeta.json IssueTracker URL violates expected format: {issue_url}"
 
-    elif pitfall_code == "P019":
+    elif pitfall_code == "P012":
         if "download_url" in pitfall_result:
             download_url = pitfall_result.get('download_url') or 'unknown URL'
             return f"{evidence_base}codemeta.json downloadURL is outdated or invalid: {download_url}"
 
-    elif pitfall_code == "P020":
-        if "development_status" in pitfall_result:
-            development_status = pitfall_result.get('development_status') or 'unknown'
-            return f"{evidence_base}codemeta.json developmentStatus is a URL instead of status string: {development_status}"
-
-    elif pitfall_code == "W021":
-        if "author_value" in pitfall_result:
-            metadata_source = extract_metadata_source(pitfall_result)
-            author_value = pitfall_result.get('author_value') or 'unknown'
-            return f"{evidence_base}{metadata_source} GivenName is a list instead of string: {author_value}"
-
-    elif pitfall_code == "P022":
+    elif pitfall_code == "P013":
         if "license_value" in pitfall_result:
             metadata_source = extract_metadata_source(pitfall_result)
             license_value = pitfall_result.get('license_value') or 'unknown'
             return f"{evidence_base}{metadata_source} License does not specify version: '{license_value}'"
 
-    elif pitfall_code == "P023":
-        if "repository_url" in pitfall_result:
-            metadata_source = extract_metadata_source(pitfall_result)
-            repository_url = pitfall_result.get('repository_url') or 'unknown URL'
-            return f"{evidence_base}{metadata_source} codeRepository uses Git shorthand instead of full URL: '{repository_url}'"
-
-    elif pitfall_code == "P024":
+    elif pitfall_code == "P014":
         if "identifier_value" in pitfall_result:
             identifier_value = pitfall_result.get('identifier_value') or 'unknown'
-            return f"{evidence_base}Identifier uses bare DOI instead of full URL: '{identifier_value}'"
+            return f"{evidence_base}codemeta.json Identifier uses bare DOI instead of full URL: '{identifier_value}'"
 
-    elif pitfall_code == "P025":
+    elif pitfall_code == "P015":
         if "ci_url" in pitfall_result:
             status = pitfall_result.get("status_code") or "unknown"
             ci_url = pitfall_result.get('ci_url') or 'unknown URL'
             return f"{evidence_base}codemeta.json Continuous integration URL returns {status}: {ci_url}"
 
-    elif pitfall_code == "P026":
+    elif pitfall_code == "P016":
         if "github_api_url" in pitfall_result:
             github_api_url = pitfall_result.get('github_api_url') or 'unknown URL'
             return f"{evidence_base}codeRepository points to different repository: {github_api_url}"
 
-    elif pitfall_code == "P027":
+    elif pitfall_code == "P017":
         if "codemeta_version" in pitfall_result:
             codemeta_version = pitfall_result.get('codemeta_version') or 'unknown'
             return f"{evidence_base}codemeta.json version '{codemeta_version}' does not match package version"
 
-    elif pitfall_code == "P028":
+    elif pitfall_code == "P018":
         if "identifier_value" in pitfall_result:
             identifier_value = pitfall_result.get('identifier_value') or 'unknown'
-            return f"{evidence_base}codemeta Identifier uses raw SWHID without resolvable URL: '{identifier_value}'"
+            return f"{evidence_base}codemeta.json Identifier uses raw SWHID without resolvable URL: '{identifier_value}'"
+
+    # Warnings
+    elif pitfall_code == "W001":
+        if "unversioned_requirements" in pitfall_result:
+            reqs = pitfall_result["unversioned_requirements"]
+            metadata_source = extract_metadata_source(pitfall_result)
+            if isinstance(reqs, list) and len(reqs) > 0:
+                clean_reqs = [str(req) for req in reqs if req is not None][:3]
+                if clean_reqs:
+                    req_list = ', '.join(clean_reqs)
+                    return f"{evidence_base}{metadata_source} contains software requirements without versions: {req_list}{'...' if len(reqs) > 3 else ''}"
+        return f"{evidence_base}Software requirements found without version specifications"
+
+    elif pitfall_code == "W002":
+        if "codemeta_date_parsed" in pitfall_result and "github_api_date_parsed" in pitfall_result:
+            codemeta_date = pitfall_result.get('codemeta_date_parsed') or 'unknown'
+            github_date = pitfall_result.get('github_api_date_parsed') or 'unknown'
+            return f"{evidence_base}codemeta.json dateModified '{codemeta_date}' is outdated compared to repository date '{github_date}'"
+        return f"{evidence_base}dateModified in codemeta.json is outdated compared to actual repository last update"
+
+    elif pitfall_code == "W003":
+        if "dual_license_source" in pitfall_result:
+            dual_license_source = pitfall_result.get('dual_license_source') or 'unknown'
+            return f"{evidence_base}Repository has multiple licenses but codemeta.json only lists one. Found in: {dual_license_source}"
+        return f"{evidence_base}Repository has multiple licenses but codemeta.json only has one listed"
+
+    elif pitfall_code == "W004":
+        if "programming_languages_without_version" in pitfall_result:
+            langs = pitfall_result["programming_languages_without_version"]
+            if isinstance(langs, list) and len(langs) > 0:
+                clean_langs = [str(lang) for lang in langs if lang is not None]
+                if clean_langs:
+                    return f"{evidence_base}codemeta.json Programming languages without versions: {', '.join(clean_langs)}"
+        return f"{evidence_base}codemeta.json Programming languages in metadata do not have version specifications"
+
+    elif pitfall_code == "W005":
+        if "requirements_string" in pitfall_result:
+            metadata_source = extract_metadata_source(pitfall_result)
+            requirements_string = pitfall_result.get('requirements_string') or 'unknown'
+            return f"{evidence_base}{metadata_source} Multiple requirements written as single string: '{requirements_string}'"
+
+    elif pitfall_code == "W006":
+        if "codemeta_identifier" in pitfall_result:
+            identifier = pitfall_result.get('codemeta_identifier') or 'unknown'
+            return f"{evidence_base}codemeta.json Identifier is a name instead of valid unique identifier: '{identifier}'"
+
+    elif pitfall_code == "W007":
+        return f"{evidence_base}codemeta.json identifier field is empty or missing"
+
+    elif pitfall_code == "W008":
+        if "author_value" in pitfall_result:
+            metadata_source = extract_metadata_source(pitfall_result)
+            author_value = pitfall_result.get('author_value') or 'unknown'
+            return f"{evidence_base}{metadata_source} GivenName is a list instead of string: {author_value}"
+
+    elif pitfall_code == "W009":
+        if "development_status" in pitfall_result:
+            development_status = pitfall_result.get('development_status') or 'unknown'
+            return f"{evidence_base}codemeta.json developmentStatus is a URL instead of status string: {development_status}"
+
+    elif pitfall_code == "W010":
+        if "repository_url" in pitfall_result:
+            metadata_source = extract_metadata_source(pitfall_result)
+            repository_url = pitfall_result.get('repository_url') or 'unknown URL'
+            return f"{evidence_base}{metadata_source} codeRepository uses Git shorthand instead of full URL: '{repository_url}'"
 
     # Default fallback evidence
     file_name = pitfall_result.get('file_name') or 'unknown file'
@@ -321,150 +328,83 @@ def get_pitfall_category(pitfall_code: str) -> str:
     Determine the category for assessesIndicator based on pitfall description.
     Returns 'codemeta', 'metadatafile', or 'license'
     """
-    pitfall_descriptions = {
+    categories = {
+        # Pitfalls
         "P001": "metadatafile",  # metadata file version mismatch
         "P002": "license",  # LICENSE file placeholders
-        "W003": "metadatafile",  # metadata file requirements
-        "W004": "codemeta",  # codemeta.json dateModified
-        "P005": "metadatafile",  # metadata file multiple authors
-        "P006": "codemeta",  # codemeta.json README property
-        "P007": "codemeta",  # codemeta.json referencePublication
-        "P008": "metadatafile",  # metadata file License pointing to local file
-        "W010": "codemeta",  # codemeta.json programming languages
-        "P011": "codemeta",  # CITATION.cff vs codemeta.json
-        "W012": "metadatafile",  # metadata file softwareRequirements
-        "P013": "metadatafile",  # metadata file softwareRequirement invalid page
-        "W014": "codemeta",  # codemeta.json Identifier name
-        "W015": "codemeta",  # codemeta.json Identifier empty
-        "P016": "metadatafile",  # metadata file coderepository homepage
-        "P017": "license",  # LICENSE file copyright only
-        "P018": "codemeta",  # codemeta.json IssueTracker
-        "P019": "codemeta",  # codemeta.json downloadURL
-        "P020": "codemeta",  # codemeta.json developmentStatus
-        "W021": "metadatafile",  # metadata file GivenName list
-        "P022": "metadatafile",  # metadata file License version
-        "P023": "metadatafile",  # metadata file codeRepository shorthand
-        "P024": "codemeta",  # codemeta.json bare DOIs
-        "P025": "codemeta",  # codemeta.json contIntegration 404
-        "P026": "metadatafile",  # metadata file codeRepository different repo
-        "P027": "codemeta",  # codemeta.json version mismatch
-        "P028": "codemeta"  # codemeta.json raw SWHIDs
+        "P003": "metadatafile",  # metadata file multiple authors
+        "P004": "codemeta",  # codemeta.json README property
+        "P005": "codemeta",  # codemeta.json referencePublication
+        "P006": "metadatafile",  # metadata file License pointing to local file
+        "P007": "codemeta",  # CITATION.cff vs codemeta.json
+        "P008": "metadatafile",  # metadata file softwareRequirement invalid page
+        "P009": "metadatafile",  # metadata file coderepository homepage
+        "P010": "license",  # LICENSE file copyright only
+        "P011": "codemeta",  # codemeta.json IssueTracker
+        "P012": "codemeta",  # codemeta.json downloadURL
+        "P013": "metadatafile",  # metadata file License version
+        "P014": "codemeta",  # codemeta.json bare DOIs
+        "P015": "codemeta",  # codemeta.json contIntegration 404
+        "P016": "metadatafile",  # metadata file codeRepository different repo
+        "P017": "codemeta",  # codemeta.json version mismatch
+        "P018": "codemeta",  # codemeta.json raw SWHIDs
+
+        # Warnings
+        "W001": "metadatafile",  # metadata file requirements
+        "W002": "codemeta",  # codemeta.json dateModified
+        "W003": "codemeta",  # codemeta.json dual license
+        "W004": "codemeta",  # codemeta.json programming languages
+        "W005": "metadatafile",  # metadata file softwareRequirements
+        "W006": "codemeta",  # codemeta.json Identifier name
+        "W007": "codemeta",  # codemeta.json Identifier empty
+        "W008": "metadatafile",  # metadata file GivenName list
+        "W009": "codemeta",  # codemeta.json developmentStatus
+        "W010": "metadatafile",  # metadata file codeRepository shorthand
     }
 
-    return pitfall_descriptions.get(pitfall_code, "metadatafile")
+    return categories.get(pitfall_code, "metadatafile")
 
-
-def extract_software_info_from_somef(somef_data: Dict) -> Dict:
-    """
-    Extract software information from SoMEF data for the assessedSoftware section.
-    """
-    software_info = {
-        "@type": "schema:SoftwareApplication",
-        "name": "Unknown",
-        "softwareVersion": "Unknown",
-        "url": "Unknown"
-    }
-
-    if "full_name" in somef_data:
-        for entry in somef_data["full_name"]:
-            if "result" in entry and "value" in entry["result"]:
-                software_info["name"] = entry["result"]["value"]
-                break
-
-    if "releases" in somef_data:
-        releases = somef_data["releases"]
-        if isinstance(releases, list) and len(releases) > 0:
-            latest_release = releases[0]
-            if isinstance(latest_release, dict):
-                if "tag" in latest_release:
-                    software_info["softwareVersion"] = latest_release["tag"]
-                elif "result" in latest_release and isinstance(latest_release["result"], dict):
-                    if "tag" in latest_release["result"]:
-                        software_info["softwareVersion"] = latest_release["result"]["tag"]
-
-    if "code_repository" in somef_data:
-        for entry in somef_data["code_repository"]:
-            if "result" in entry and "value" in entry["result"]:
-                software_info["url"] = entry["result"]["value"]
-                break
-
-    if "identifier" in somef_data:
-        for entry in somef_data["identifier"]:
-            if "result" in entry and "value" in entry["result"]:
-                identifier_value = entry["result"]["value"]
-                if identifier_value.startswith("https://doi.org/"):
-                    software_info["schema:identifier"] = {"@id": identifier_value}
-                elif identifier_value.startswith("10."):
-                    software_info["schema:identifier"] = {"@id": f"https://doi.org/{identifier_value}"}
-                break
-
-    return software_info
 
 def get_suggestion_text(pitfall_code: str) -> str:
     """
     Adds the suggestions depending on the Pitfall/Warning
     """
-    """
-        "P001": "The metadata file (codemeta or other) has a version which does not correspond to the version used in the latest release",
-        "P002": "LICENSE file contains template placeholders like <program>, <year>, <name of author> that were not replaced",
-        "W001": "The metadata file (codemeta or other) Software requirements don't have version specifications",
-        "W002": "codemeta.json dateModified is outdated compared to the actual repository last update date",
-        "P003": "The metadata file (codemeta or other) have multiple authors in single field instead of a list",
-        "P004": "In codemeta.json README property pointing to their homepage/wiki instead of README file",
-        "P005": "codemeta.json referencePublication refers to software archive instead of paper",
-        "P006": "The metadata file (codemeta or other) has License pointing to a local file instead of stating the name",
-        "W003": "Inconsistent use of licenses in metadata files"
-        "W004": "Programming languages in codemeta.json do not have versions",
-        "P007": "CITATION.cff does not have referencePublication even though it's referenced in codemeta.json",
-        "W005": "The metadata file (codemeta or other) softwareRequirements have more than one req, but it's written as one string",
-        "P008": "The metadata file (codemeta or other) softwareRequirement points to an invalid page",
-        "W006": "codemeta.json Identifier is a name instead of a valid unique identifier, but an identifier exist",
-        "W007": "codemeta.json Identifier is empty",
-        "P009": "The metadata file (codemeta or other) coderepository points to their homepage",
-        "P010": "LICENSE file only contains copyright information without actual license terms",
-        "P011": "codemeta.json IssueTracker violates the expected URL format",
-        "P012": "codemeta.json downloadURL is outdated",
-        "W009": "codemeta.json developmentStatus is a URL instead of a string",
-        "W008": "coendemeta GivName is a list instead of a string",
-        "P013": "The metadata file (codemeta or other) License does not have the specific version",
-        "W010": "The metadata file (codemeta or other) codeRepository uses Git remote-style shorthand instead of full URL",
-        "P014": "codemeta.json uses bare DOIs in the identifier field instead of full https://doi.org/ URL",
-        "P015": "In codemeta.json contIntegration link returns 404",
-        "P016": "The metadata file (codemeta or other) codeRepository does not point to the same repository",
-        "P017": "codemeta.json version does not match the package's",
-        "P018": "codemeta.json Identifier uses raw SWHIDs without their resolvable URL"
-    """
-    pitfall_suggestions = {
+    suggestions = {
+        # Pitfalls
         "P001": "Ensure the version in your metadata matches the latest official release. Keeping these synchronized avoids confusion for users and improves reproducibility.",
         "P002": "Update the copyright section with accurate names, organizations, and the current year. Personalizing this section ensures clarity and legal accuracy.",
-        "W001": "Add version numbers to your dependencies. This provides stability for users and allows reproducibility across different environments.",
-        "W002": "You need to align the version in your metadata file with your latest release tag. Automating this synchronization as part of your release process is highly recommended.",
         "P003": "You should separate multiple authors into a structured list. This allows tools and citation systems to correctly identify and credit each contributor.",
         "P004": "Update the README property so it points directly to your actual README file instead of your homepage. This helps ensure users and automated tools can access your project documentation easily.",
         "P005": "Ensure that the referencePublication field points to the scholarly paper describing the software, not to a software archive or repository entry.",
         "P006": "You need to replace local file paths with recognized SPDX license identifiers, such as MIT or GPL-3.0-only in URL form. This ensures your license can be correctly detected by automated tools.",
-        "W003": "Make sure you are using the correct licenses. This avoids confusion about terms of use and ensures full transparency.",
-        "W004": "Include version numbers for each programming language used. Defining these helps ensure reproducibility and compatibility across systems.",
-        "P007": "Add a referencePublication field with the related DOI or citation entry to your CITATION.cff. This will help link your work to its scholarly references. ",
-        "P008": "Verify and update any dependency links to ensure they lead to valid and accessible pages.  .",
-        "W005": "Rewrite your dependencies as a proper list, with each item separated and preferably with their versions. This makes them easier to parse for metadata systems.",
-        "W006": "You should replace plain name in your identifier field with persistent identifiers, such as DOIs or SWHIDs, to improve discoverability and interoperability.",
+        "P007": "Add a referencePublication field with the related DOI or citation entry to your CITATION.cff. This will help link your work to its scholarly references.",
+        "P008": "Verify and update any dependency links to ensure they lead to valid and accessible pages.",
         "P009": "You need to update the codeRepository field to point directly to your repository's source code instead of a homepage. Accurate links improve traceability and user access.",
         "P010": "You need to include the complete text of a recognized license such as MIT, Apache 2.0, or GPL. A full license clarifies rights and usage conditions for others",
         "P011": "You need to correct the issue tracker URL so it follows a valid format, such as https://github.com/user/repo/issues. Proper links help users engage with your development process.",
         "P012": "You need to update the downloadURL field to point to your latest release or current distribution source. Outdated links can mislead users or cause failed installations.",
-        "W009": "You need to replace URLs in the developmentStatus field with descriptive text values, such as 'active', 'beta', or 'stable'. This maintains schema compliance and clarity.",
-        "W008": "Ensure givenName is a single string per person. This ensures that every author is properly credited and can be extracted automatically ",
         "P013": "You should declare the specific version of the license using a recognized SPDX identifier. For example, use 'GPL-3.0-only' or 'GPL-2.0-or-later' instead of simply 'GPL'",
-        "W010": "You should replace the remote-style syntax with a full web-accessible URL (e.g., https://github.com/user/repo).",
         "P014": "You should include the full DOI URL form in your metadata (e.g., https://doi.org/XX.XXXX/zenodo.XXXX)",
-        "P015": "You need to update the outdated URLs to point to the current CI platform, or remove the property if no active CI is in place. A good pratcie would be to periodically test all external links, especially those related to CI or build status.",
+        "P015": "You need to update the outdated URLs to point to the current CI platform, or remove the property if no active CI is in place. A good practice would be to periodically test all external links, especially those related to CI or build status.",
         "P016": "Make sure that the codeRepository URL in your metadata exactly matches the repository hosting your source code.",
         "P017": "You need to synchronize all version references across metadata and build configuration files.",
-        "P018": "Always use the full resolvable SWHID URL (e.g., https://archive.softwareheritage.org/swh:1:dir:abcd.../). This will ensures that both humans and machines can access the archived software snapshot directly"
+        "P018": "Always use the full resolvable SWHID URL (e.g., https://archive.softwareheritage.org/swh:1:dir:abcd.../). This will ensure that both humans and machines can access the archived software snapshot directly",
+
+        # Warnings
+        "W001": "Add version numbers to your dependencies. This provides stability for users and allows reproducibility across different environments.",
+        "W002": "You need to align the version in your metadata file with your latest release tag. Automating this synchronization as part of your release process is highly recommended.",
+        "W003": "Make sure you are using the correct licenses. This avoids confusion about terms of use and ensures full transparency.",
+        "W004": "Include version numbers for each programming language used. Defining these helps ensure reproducibility and compatibility across systems.",
+        "W005": "Rewrite your dependencies as a proper list, with each item separated and preferably with their versions. This makes them easier to parse for metadata systems.",
+        "W006": "You should replace plain name in your identifier field with persistent identifiers, such as DOIs or SWHIDs, to improve discoverability and interoperability.",
+        "W007": "Add a valid unique identifier to the identifier field in codemeta.json, such as a DOI or SWHID.",
+        "W008": "Ensure givenName is a single string per person. This ensures that every author is properly credited and can be extracted automatically",
+        "W009": "You need to replace URLs in the developmentStatus field with descriptive text values, such as 'active', 'beta', or 'stable'. This maintains schema compliance and clarity.",
+        "W010": "You should replace the remote-style syntax with a full web-accessible URL (e.g., https://github.com/user/repo).",
     }
 
-    return pitfall_suggestions.get(pitfall_code, f"Suggestion for {pitfall_code}")
+    return suggestions.get(pitfall_code, f"Review and address the issue described for {pitfall_code}")
+
 
 def extract_description_info(somef_data: Dict) -> str:
     """
@@ -476,6 +416,7 @@ def extract_description_info(somef_data: Dict) -> str:
                 return entry["result"]["value"]
 
     return "Software quality assessment for repository metadata"
+
 
 def convert_sets_to_lists(obj):
     """
@@ -489,6 +430,7 @@ def convert_sets_to_lists(obj):
         return [convert_sets_to_lists(item) for item in obj]
     else:
         return obj
+
 
 def create_pitfall_jsonld(somef_data: Dict, pitfall_results: List[Dict], file_name: str) -> Dict:
     """
@@ -508,7 +450,7 @@ def create_pitfall_jsonld(somef_data: Dict, pitfall_results: List[Dict], file_na
             "email": "example@email.com"
         },
         "dateCreated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "license": {"@id: https://opensource.org/license/mit"},
+        "license": {"@id": "https://opensource.org/license/mit"},
         "assessedSoftware": software_info,
         "checks": []
     }
@@ -529,7 +471,7 @@ def create_pitfall_jsonld(somef_data: Dict, pitfall_results: List[Dict], file_na
                 },
                 "process": get_pitfall_description(pitfall_code),
                 "status": {"@id": "schema:CompletedActionStatus"},
-                "checkId":pitfall_code,
+                "checkId": pitfall_code,
                 "evidence": format_evidence_text(pitfall_code, pitfall_result),
                 "suggestion": get_suggestion_text(pitfall_code)
             }
@@ -543,7 +485,7 @@ def save_individual_pitfall_jsonld(jsonld_data: Dict, output_dir: Path, file_nam
     """
     Save individual JSON-LD file for a repository's pitfalls.
     """
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(exist_ok=True, parents=True)
 
     base_name = Path(file_name).stem
     output_file = output_dir / f"{base_name}_pitfalls.jsonld"
@@ -559,4 +501,3 @@ def save_individual_pitfall_jsonld(jsonld_data: Dict, output_dir: Path, file_nam
     except Exception as e:
         print(f"Error saving JSON-LD file {output_file}: {e}")
         return None
-

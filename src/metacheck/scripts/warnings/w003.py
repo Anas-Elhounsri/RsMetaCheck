@@ -23,11 +23,12 @@ def detect_dual_license_missing_codemeta_pitfall(somef_data: Dict, file_name: st
 
     dual_license_patterns = [
         r"dual[\s-]?licen[cs]ed?",
+        r"dually[\s-]?licen[cs]ed?",
         r"multiple[\s-]?licen[cs]es?",
         r"licen[cs]ed?\s+under.*(?:and|or)",
         r"choose.*licen[cs]e",
         r"either.*licen[cs]e",
-        r"(?:\d+\..*licen[cs]e.*){2,}",
+        r"\d+\..*licen[cs]e.*\n.*\d+\..*licen[cs]e",
         r"licen[cs]e.*options?",
         r"available\s+under.*licen[cs]es?"
     ]
@@ -43,7 +44,7 @@ def detect_dual_license_missing_codemeta_pitfall(somef_data: Dict, file_name: st
         if technique == "code_parser" and "codemeta.json" in source:
             codemeta_license_count += 1
         else:
-            if "result" in entry and "value" in entry["result"]:
+            if not has_dual_license_indicator and "result" in entry and "value" in entry["result"]:
                 license_text = entry["result"]["value"]
                 if isinstance(license_text, str):
                     license_text_lower = license_text.lower()

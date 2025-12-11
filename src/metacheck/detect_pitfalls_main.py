@@ -35,6 +35,7 @@ from metacheck.scripts.warnings.w007 import detect_empty_identifier_warning
 from metacheck.scripts.warnings.w008 import detect_author_name_list_warning
 from metacheck.scripts.warnings.w009 import detect_development_status_url_pitfall
 from metacheck.scripts.warnings.w010 import detect_git_remote_shorthand_pitfall
+from metacheck.scripts.warnings.w011 import detect_inconsistent_author_count
 
 
 def detect_all_pitfalls(json_files: Iterable[Path], pitfalls_output_dir: Union[str, Path], output_file: Union[str, Path]):
@@ -260,6 +261,13 @@ def detect_all_pitfalls(json_files: Iterable[Path], pitfalls_output_dir: Union[s
                 "percentage": 0.0,
                 "languages": {}
             },
+            {
+                "pitfall_code": "W011",
+                "pitfall_desc": "The metadata file codeRepository does not have matching number of authors",
+                "count": 0,
+                "percentage": 0.0,
+                "languages": {}
+            }
         ]
     }
 
@@ -299,6 +307,7 @@ def detect_all_pitfalls(json_files: Iterable[Path], pitfalls_output_dir: Union[s
         (detect_author_name_list_warning, "W008"),  # Index 24 -> W008
         (detect_development_status_url_pitfall, "W009"),  # Index 25 -> W009
         (detect_git_remote_shorthand_pitfall, "W010"),  # Index 26 -> W010
+        (detect_inconsistent_author_count, "W011"),
     ]
 
     for json_file in json_files:

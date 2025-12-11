@@ -1,4 +1,3 @@
-
 import re
 from typing import Dict, Optional
 
@@ -18,7 +17,6 @@ def extract_license_from_file(somef_data: Dict) -> Optional[Dict[str, str]]:
     for entry in license_entries:
         if "source" in entry:
             source = entry["source"]
-            # Look for LICENSE files (LICENSE, LICENSE.md, etc.)
             if "LICENSE" in source.upper() and "result" in entry and "value" in entry["result"]:
                 return {
                     "source": source,
@@ -41,16 +39,14 @@ def check_copyright_only_license(license_content: str) -> bool:
     content_lower = license_content.lower().strip()
     content_lines = [line.strip() for line in license_content.strip().split('\n') if line.strip()]
 
-    # Patterns that indicate copyright-only content
     copyright_only_patterns = [
-        r'year\s*:\s*\d{4}',  # YEAR: 2017 (removed ^ and $ to match anywhere in text)
+        r'year\s*:\s*\d{4}',  # YEAR: 2017
         r'copyright\s+holder\s*:\s*[a-zA-Z]',  # COPYRIGHT HOLDER: Someone
         r'author\s*:\s*[a-zA-Z]',  # AUTHOR: Someone
         r'copyright\s*©?\s*\d{4}',  # Copyright 2017 or Copyright © 2017
         r'\(c\)\s*\d{4}',  # (C) 2017
     ]
 
-    # Patterns that indicate actual license terms
     license_term_patterns = [
         r'permission\s+is\s+hereby\s+granted',
         r'subject\s+to\s+the\s+following\s+conditions',
@@ -70,33 +66,36 @@ def check_copyright_only_license(license_content: str) -> bool:
     has_copyright_info = any(re.search(pattern, content_lower) for pattern in copyright_only_patterns)
     has_license_terms = any(re.search(pattern, content_lower) for pattern in license_term_patterns)
 
-    # If it has copyright info but no license terms and is short, it's likely copyright-only
+    if has_license_terms:
+        return False
+
+    # This will check if it has copyright info but no license terms and is short, it's likely copyright-only
     if has_copyright_info and not has_license_terms and len(content_lines) <= 10:
         return True
 
-    # Special case: check for the exact format "YEAR: xxxx" and "COPYRIGHT HOLDER: xxxx"
+    # Check for the exact format "YEAR: xxxx" and "COPYRIGHT HOLDER: xxxx"
     year_pattern_found = bool(re.search(r'year\s*:\s*\d{4}', content_lower))
     copyright_holder_pattern_found = bool(re.search(r'copyright\s+holder\s*:', content_lower))
 
     if year_pattern_found and copyright_holder_pattern_found:
+        if has_license_terms:
+            return False
         return True
 
-    # Additional check: if the content is very short and only contains basic copyright info
-    if len(content_lines) <= 5:  # Increased from 3 to 5 for more flexibility
-        # Check if all lines are just copyright/year information
+    if len(content_lines) <= 5:
         meaningful_lines = []
+
         for line in content_lines:
             line_lower = line.lower()
-            # Skip lines that are just copyright patterns
+
             if not any(re.search(pattern, line_lower) for pattern in copyright_only_patterns):
-                # This line doesn't match copyright patterns, check if it's meaningful
+
                 if (len(line.strip()) > 0 and
                     not line.strip().startswith('#') and
                     not line.strip().startswith('//') and
                     line.strip() not in ['', '-', '=', '*']):
                     meaningful_lines.append(line)
 
-        # If we have very few meaningful lines and some copyright info, it's probably copyright-only
         if len(meaningful_lines) <= 1 and has_copyright_info:
             return True
 

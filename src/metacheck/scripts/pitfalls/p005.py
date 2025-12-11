@@ -1,7 +1,6 @@
 from typing import Dict
 import re
 
-
 def is_software_archive_url(url: str) -> bool:
     """
     Check if URL points to a software archive instead of a research paper.

@@ -36,8 +36,8 @@ def check_ci_url_status(url: str, timeout: int = 10) -> Dict:
         response = requests.get(url, timeout=timeout, headers=headers, allow_redirects=True)
         result["status_code"] = response.status_code
 
-        # Consider 200-299 as successful
-        if 200 <= response.status_code < 300:
+        # Consider 200-302 (except 300) as successful
+        if 200 <= response.status_code < 300 or 300 < response.status_code <303 :
             result["is_accessible"] = True
 
     except requests.exceptions.RequestException as e:

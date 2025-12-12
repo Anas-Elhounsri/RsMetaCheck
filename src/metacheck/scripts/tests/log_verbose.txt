@@ -1,7 +1,7 @@
 ============================= test session starts ==============================
 platform linux -- Python 3.10.19, pytest-7.4.4, pluggy-1.6.0 -- /home/goblin/RsMetaCheck/py3.10/bin/python
 cachedir: .pytest_cache
-rootdir: /home/goblin/RsMetaCheck
+rootdir: /home/[anon]/RsMetaCheck
 plugins: typeguard-4.4.4
 collecting ... collected 1366 items
 

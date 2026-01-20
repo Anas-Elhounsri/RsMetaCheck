@@ -452,7 +452,7 @@ def create_pitfall_jsonld(somef_data: Dict, pitfall_results: List[Dict], file_na
     description_info = extract_description_info(somef_data)
 
     jsonld_output = {
-        "@context": "https://w3id.org/example/metacheck/0.1.0/",
+        "@context": "https://w3id.org/example/metacheck/0.2.0/",
         "@type": "SoftwareQualityAssessment",
         "name": f"Quality Assessment for {software_info['name']}",
         "description": description_info,
@@ -479,7 +479,7 @@ def create_pitfall_jsonld(somef_data: Dict, pitfall_results: List[Dict], file_na
                     "@type": "schema:SoftwareApplication",
                     "name": "metacheck",
                     "@id": "https://w3id.org/example/metacheck/tools/",
-                    "softwareVersion": "0.1.0"
+                    "softwareVersion": "0.2.0"
                 },
                 "process": get_pitfall_description(pitfall_code),
                 "status": {"@id": "schema:CompletedActionStatus"},

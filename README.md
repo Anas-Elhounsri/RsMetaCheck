@@ -1,14 +1,14 @@
 # Research Software MetaCheck (a Pitfall/Warning Detection Tool)
 
 This project provides an automated tool for detecting common metadata quality issues (pitfalls & Warnings)
-in software repositories. The tool analyzes SoMEF (Software Metadata Extraction Framework) output 
+in software repositories. The tool analyzes SoMEF (Software Metadata Extraction Framework) output
 files to identify various problems in repository metadata
 files such as `codemeta.json`, `package.json`, `setup.py`, `DESCRIPTION`, and others.
 
 ## Overview
 
-MetaCheck identifies **27 different types of metadata quality issues** across multiple programming languages 
-(Python, Java, C++, C, R, Rust). These pitfalls range from version mismatches and 
+MetaCheck identifies **29 different types of metadata quality issues** across multiple programming languages
+(Python, Java, C++, C, R, Rust). These pitfalls range from version mismatches and
 license template placeholders to broken URLs and improperly formatted metadata fields.
 
 ### Supported Pitfall Types
@@ -37,12 +37,14 @@ The tool detects the following categories of issues:
 ### Using Poetry (Recommended)
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/Anas-Elhounsri/RsMetaCheck.git
    cd RsMetaCheck
    ```
 
 2. **Install with Poetry**:
+
    ```bash
    poetry install
    ```
@@ -56,6 +58,7 @@ The tool detects the following categories of issues:
 ### Using pip
 
 Alternatively, you can install directly from GitHub:
+
 ```bash
 pip install git+https://github.com/Anas-Elhounsri/RsMetaCheck.git
 ```
@@ -75,7 +78,7 @@ poetry run rsmetacheck --input https://github.com/tidyverse/tidyverse
 ```bash
 poetry run rsmetacheck --input repositories.json
 ```
-  
+
 The `repositories.json` file should be structured as follows:
 
 ```json
@@ -109,28 +112,30 @@ Or for multiple paths:
 ```bash
 poetry run rsmetacheck --skip-somef --input my_somef_outputs_1/*.json my_somef_outputs_2/*.json
 ```
+
 ### Output
 
 The tool will:
+
 - Process all JSON files in the `somef_outputs` (by default created by the tool) directory
 - Display progress messages showing detected pitfalls
-- Generate JSON-LD files of detailed Pitfalls and Warnings detected by the tool in  `output_1_pitfalls.jsonld`, 
-`output_2_pitfalls.jsonld`, etc... in `pitfalls` (by default created by the tool) directory
+- Generate JSON-LD files of detailed Pitfalls and Warnings detected by the tool in `output_1_pitfalls.jsonld`,
+  `output_2_pitfalls.jsonld`, etc... in `pitfalls` (by default created by the tool) directory
 - Generate a comprehensive report in `all_pitfalls_results.json`
 
 The output file contains:
+
 - EVERSE standardized JSON-LD output of each repository
 - Summary statistics of analyzed repositories
 - Count and percentage for each pitfall type
 - Language-specific breakdown for repositories with target languages
 
-
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"There is no valid repository URL" error**: Ensure the JSON file that contains the repositories 
-has a valid structure and that you are inputing the correct path
+1. **"There is no valid repository URL" error**: Ensure the JSON file that contains the repositories
+   has a valid structure and that you are inputing the correct path
 2. **Network timeouts**: Some pitfalls validate URLs and may time out this is normal behavior
 
 ### Performance Notes
@@ -141,6 +146,6 @@ has a valid structure and that you are inputing the correct path
 
 ## Contributing
 
-The system is designed with modularity in mind. Each pitfall detector is implemented as a 
-separate module in the `scripts/` directory, making it easy to add new pitfall types or modify 
+The system is designed with modularity in mind. Each pitfall detector is implemented as a
+separate module in the `scripts/` directory, making it easy to add new pitfall types or modify
 existing detection logic.
